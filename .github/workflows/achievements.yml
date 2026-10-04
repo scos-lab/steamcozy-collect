@@ -11,7 +11,7 @@ on:
         default: ''
 
 permissions:
-  contents: read
+  contents: write   # publish to the rolling release (see the last step)
 
 concurrency:
   group: collect-achievements
@@ -43,3 +43,22 @@ jobs:
           path: out/
           retention-days: 30
           if-no-files-found: warn
+      # Also publish to a rolling public release: anyone can download release assets of a
+      # public repo without logging in, so the build machine needs no GitHub token to import.
+      # One release per kind; assets are dated (news_<date>_s<shard>.*); older than 30 days are deleted.
+      - name: Publish to release
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls out/* >/dev/null 2>&1 || exit 0
+          gh release view ach-data >/dev/null 2>&1 || gh release create ach-data --title "achievement completion rates (rolling, last 30 days)" \
+            --notes "Daily output of the achievement completion rates collector. One .jsonl.gz + .meta.json per shard and day. Older than 30 days are pruned." || true
+          for i in 1 2 3; do gh release upload ach-data out/* --clobber && break; sleep 10; done
+          if [ "${{ matrix.shard }}" = 0 ]; then
+            cut=$(date -u -d '30 days ago' +%F)
+            gh api "repos/${{ github.repository }}/releases/tags/ach-data" --jq '.assets[] | "\(.id) \(.name)"' \
+              | while read -r id name; do d=$(echo "$name" | grep -oE '[0-9]{4}-[0-9]{2}-[0-9]{2}'); \
+                  [ -n "$d" ] && [ "$d" \< "$cut" ] && gh api -X DELETE "repos/${{ github.repository }}/releases/assets/$id" && echo "pruned $name"; done
+          fi
+
