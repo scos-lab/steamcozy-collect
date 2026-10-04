@@ -11,7 +11,7 @@ pipeline/fetch_news.py):
   hot   every day                 tiers/news_hot.json
   warm  Sundays (UTC) — feeds the builder's Monday-morning (Australia) run   tiers/news_warm.json
   cold  1/7 per day, by appid % 7 == date.toordinal() % 7   tiers/news_cold.json
-The union is split again by --shard i/n (appid % n == i) so CI runs it as a matrix.
+The union is split again by --shard i/n (every n-th game by position) so CI runs it as a matrix.
 
 Output: out/news_<date>_s<i>.jsonl.gz, one line per news item:
   {"appid", "gid", "title", "url", "date", "feedlabel", "feed_type", "contents"}
@@ -86,7 +86,9 @@ def main() -> int:
     out_dir = Path(args[args.index("--out") + 1]) if "--out" in args else HERE / "out"
     out_dir.mkdir(parents=True, exist_ok=True)
     appids, sizes = todays_appids(day)
-    mine = [a for a in appids if a % n == i]
+    # Split by position, not by appid: Steam appids are almost all multiples of 10, so
+    # `appid % 2` put 20,293 of 20,314 games in shard 0 on the first run (2026-10-04).
+    mine = appids[i::n]
     print(f"{day} shard {i}/{n}: {len(mine):,} of {len(appids):,} appids  {sizes}", flush=True)
     stem = out_dir / f"news_{day}_s{i}"
     t0 = time.time()
