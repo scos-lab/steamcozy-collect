@@ -26,3 +26,13 @@ next run (the API always returns the latest 10 items).
 Politeness: 0.25 s between requests, 429/5xx retried with backoff, one retry pass
 for failures after the sweep, no retry at all if more than 500 failed (that's an
 outage, not jitter — the failures are reported in the meta file instead).
+
+## achievements (`collect_achievements.py`, `.github/workflows/achievements.yml`)
+
+Steam's public keyless `ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2`.
+Every game with a steamcozy page (`tiers/achievements.json`, exported by the builder)
+is refreshed once a week: 1/7 per day (`appid % 7 == date.toordinal() % 7`).
+Only completion rates are collected here — display names, descriptions and icons
+need a Web API key (`GetSchemaForGame`), almost never change, and are filled in by
+the builder for achievement names it hasn't seen before.
+Output: artifact `ach-<run_id>-s<shard>` (`.jsonl.gz` + `.meta.json`), kept 30 days.
