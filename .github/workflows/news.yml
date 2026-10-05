@@ -1,9 +1,10 @@
 name: collect-news
 on:
   schedule:
-    # 18:17 UTC = 04:17-05:17 in Australia, done well before the builder's 09:00 run.
-    # :17 avoids the top-of-hour crowd (same as the sister repos).
-    - cron: '17 18 * * *'
+    # 14:17 UTC = 00:17-01:17 in Australia. GitHub delays scheduled runs: the first one (cron 18:17)
+    # started 21:23 and ended 22:42 UTC, after the builder's 22:00/23:00 UTC daily run had begun.
+    # ~1.3 h of work + up to ~4 h of delay still lands before it. :17 avoids the top-of-hour crowd.
+    - cron: '17 14 * * *'
   workflow_dispatch:
     inputs:
       date:
